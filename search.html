@@ -124,13 +124,14 @@
                 </ul>
                 <div class="clearfix"></div>
             </div>
-            <!--selector-->
+
             <div class="clearfix selector">
-                <div class="type-wrap" v-for="(f,index) in filters" :key="index" v-if="f.k!='品牌'" v-show="index < 5 || show" >
+                <div class="type-wrap" v-for="(f,index) in filters" :key="index" v-if="f.k!='品牌'"
+                     v-show="index<5 || show">
                     <div class="fl key">{{f.key}}</div>
                     <div class="fl value">
                         <ul class="type-list">
-                            <li v-for="(o,j) in f.options" :key="j" @click="selectFilter(f.key, o)">
+                            <li v-for="(o,j) in f.options" :key="j" @click="selectFilter(f.k,o)">
                                 <a>{{o.name}}</a>
                             </li>
                         </ul>
@@ -141,8 +142,12 @@
                     <div class="fl key brand">{{f.key}}</div>
                     <div class="value logos">
                         <ul class="logo-list">
-                            <li v-for="(o,j) in f.options" :key="j" v-if="o.image" @click="selectFilter(f.key, o)"><img :src="o.image" /></li>
-                            <li v-else style="text-align: center" @click="selectFilter(f.key, o)"><a style="line-height: 30px; font-size: 12px" href="#">{{o.name}}></a></li>
+                            <li v-for="(o,j) in f.options" v-if="o.image" :key="j" @click="selectFilter(f.k,o)">
+                                <img :src="o.image"/>
+                            </li>
+                            <li v-else style="text-align: center">
+                                <a style="line-height: 30px; font-size: 12px" href="#" @click="selectFilter(f.k,o)">{{o.name}}</a>
+                            </li>
                         </ul>
                     </div>
                     <div class="fl ext">
@@ -150,14 +155,19 @@
                     </div>
                 </div>
                 <div class="type-wrap" style="text-align: center">
-                    <v-btn small flat @click="show=true" v-show="!show">
-                        更多<v-icon>arrow_drop_down</v-icon>
+                    <v-btn small flat v-show="!show" @click="show=true">
+                        更多
+                        <v-icon>arrow_drop_down</v-icon>
                     </v-btn>
-                    <v-btn small flat @click="show=false" v-show="show">
-                        收起<v-icon>arrow_drop_up</v-icon>
+                    <v-btn small="" v-show="show" flat @click="show=false">
+                        收起
+                        <v-icon>arrow_drop_up</v-icon>
                     </v-btn>
                 </div>
             </div>
+
+
+
             <!--details-->
             <div class="details">
                 <div class="sui-navbar">

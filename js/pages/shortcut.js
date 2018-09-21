@@ -6,6 +6,7 @@ const shortcut = {
                <li class='f-item'>乐优欢迎您！</li> \
                <li class='f-item' v-if='user && user.username'>\
                尊敬的会员，<span style='color: red;'>{{user.username}}</span>\
+               ，<a href='javascript:void(0)' @click='quitLogin'>退出登录</a>\
                </li>\
                <li v-else class='f-item'> \
                    请<a href='javascript:void(0)' @click='gotoLogin'>登录</a>　 \
@@ -53,7 +54,24 @@ const shortcut = {
     methods: {
         gotoLogin() {
             window.location = "login.html?returnUrl=" + window.location;
+        },
+        setCookie(cname, cvalue, exdays) {
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            var expires = "expires="+d.toUTCString();
+            document.cookie = cname + "=" + cvalue + "; " + expires;
+        },
+        clearCookie(name) {
+            setCookie(name, "", -1);
+        },
+
+        quitLogin(){
+            //清除cookie
+           // clearCookie("Ly_TOKEN");
+
+            window.location = "login.html?returnUrl=" + window.location;
         }
+
     }
 }
 export default shortcut;

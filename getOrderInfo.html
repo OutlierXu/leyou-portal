@@ -116,8 +116,8 @@
 					</div>
 					<div class="step-cont">
 						<ul class="payType">
-							<li class="" >微信付款<span title="点击取消选择"></span></li>
-							<li class="selected">货到付款<span title="点击取消选择"></span></li>
+							<li :class="{selected: order.paymentType==1}" @click="order.paymentType=1" >微信付款<span title="点击取消选择"></span></li>
+							<li :class="{selected: order.paymentType==2}" @click="order.paymentType=2">货到付款<span title="点击取消选择"></span></li>
 						</ul>
 					</div>
 					<div class="hr"></div>
@@ -126,21 +126,23 @@
 					</div>
 					<div class="step-cont">
 						<ul class="send-detail">
-							<li >
+							<li v-for="(goods,i) in carts" :key="i">
 								<div class="sendGoods">
 									<ul class="yui3-g">
 										<li class="yui3-u-1-6">
-											<span><img width="70px" height="70px" src="img/goods.png"/></span>
+											<span><img width="70px" height="70px" :src="goods.image"/></span>
 										</li>
 										<li class="yui3-u-7-12">
-											<div class="desc">macbook air 2017新款，带bar 顺畅装逼体验</div>
-											<div class="seven">7天无理由退货</div>
+											<div class="desc">{{goods.title}}</div>
+											<div class="seven">
+												<span v-for="(v) in JSON.parse(goods.ownSpec)">{{v + "  "}} </span>
+											</div>
 										</li>
 										<li class="yui3-u-1-12">
-											<div class="price">￥8848.00</div>
+											<div class="price">￥{{ly.formatPrice(goods.num*goods.price)}}</div>
 										</li>
 										<li class="yui3-u-1-12">
-											<div class="num">X1</div>
+											<div class="num">X{{goods.num}}</div>
 										</li>
 										<li class="yui3-u-1-12">
 											<div class="exit">有货</div>
@@ -172,28 +174,28 @@
 		<div class="order-summary">
 			<div class="static fr">
 				<div class="list">
-					<span><i class="number">1</i>件商品，总商品金额</span>
-					<em class="allprice">¥8848.00</em>
+					<span><i class="number">{{totalNum}}</i>件商品，总商品金额</span>
+					<em class="allprice">¥{{ly.formatPrice(totalPay)}}</em>
 				</div>
 				<div class="list">
 					<span>返现：</span>
-					<em class="money">0.00</em>
+					<em class="money">{{ly.formatPrice(order.discount)}}</em>
 				</div>
 				<div class="list">
 					<span>运费：</span>
-					<em class="transport">0.00</em>
+					<em class="transport">{{ly.formatPrice(order.postFee)}}</em>
 				</div>
 			</div>
 		</div>
 		<div class="clearfix trade">
-			<div class="fc-price">应付金额:　<span class="price">¥8848</span></div>
+			<div class="fc-price">应付金额:　<span class="price">¥{{ly.formatPrice(actualPay)}}</span></div>
 			<div class="fc-receiverInfo">
 				寄送至:{{addresses[selectedAddress].address}}
 				收货人：{{addresses[selectedAddress].name}} {{addresses[selectedAddress].phone}}
 			</div>
 		</div>
 		<div class="submit">
-			<a class="sui-btn btn-danger btn-xlarge" href="pay.html">提交订单</a>
+			<a class="sui-btn btn-danger btn-xlarge" href="#" @click.prevent="submitOrder">提交订单</a>
 		</div>
 	</div>
 
@@ -205,6 +207,7 @@
         var orderInfoVm = new Vue({
             el:"#orderInfoApp",
             data:{
+                ly,
                 addresses:[// 可选地址列表,假数据，需要从后台查询
 					{
 					    name:"锋哥",// 收件人姓名
@@ -228,8 +231,86 @@
                     }
 				],
 				selectedAddress: 0,
+                carts:[], //被选中的商品
+				order:{
+                    paymentType: 1,
+                    postFee:2500,
+                    discount:2000
+				},
+
 
             },
+			created(){
+                //加载当前用户选中的商品
+                this.loadCarts();
+				//加载当前用户的地址信息
+				this.loadAddresses();
+			},
+			methods:{
+                loadAddresses(){
+					//后台加载用户的地址信息
+				},
+                loadCarts(){
+                    ly.verifyUser().then(()=> {
+                        //用户登录时，查询localStorage中的选中商品
+                        this.carts = ly.store.get("SELECTED") || [];
+
+                        //清空选中的结算商品
+                        ly.store.del("SELECTED");
+                    }).catch()
+				},
+                submitOrder(){
+
+                    const orderDetails = this.carts.map(({userId,...rest})=>rest);
+                    const addr = this.addresses[this.selectedAddress];
+                    const obj = {
+                        receiver: addr.name,
+                        receiverState: addr.state,
+                        receiverCity: addr.city,
+                        receiverAddress: addr.address,
+                        receiverDistrict: addr.district,
+                        receiverMobile: addr.phone,
+                        receiverZip: addr.zipCode
+                    };
+
+                    // 复制到订单对象
+                    Object.assign(this.order, obj, {
+                        orderDetails,
+                        totalPay: this.totalPay,
+                        actualPay: this.actualPay,
+                    });
+
+                    // 提交订单
+                    ly.http.post("order/order", this.order,{
+                        //对响应数据进行处理的回调函数
+                        transformResponse:[
+                            function (data) {
+                            	//取消默认（后台返回的是Json的字符串，在axios内部会自动调用 JSON.parse()方法把json字符串转为JS数据），不对data精选json反序列化处理
+								return data;
+                            }
+						]
+					}).then(({data}) => {
+                        // 在线支付，返回订单号和应付金额actualPay需要到付款页
+                        ly.store.set("ACTUALPAY",this.actualPay);
+                        window.location = "pay.html?orderId=" + data;
+                    }).catch((resp) => {
+                        alert("订单提交失败，可能是缺货!")
+                    })
+
+				}
+			},
+			computed:{
+
+                totalNum(){
+                    return this.carts.reduce((c1, c2) => c1 + c2.num, 0)
+                },
+                totalPay(){
+                    return this.carts.reduce((c1, c2) => c1 + c2.price * c2.num, 0);
+                },
+                actualPay(){
+                    return this.totalPay + this.order.postFee - this.order.discount;
+                }
+			},
 			components:{
                 shortcut: () => import("/js/pages/shortcut.js")
 			}
